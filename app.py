@@ -1,7 +1,9 @@
 import io
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import streamlit as st
 
 st.set_page_config(page_title="Teen Mental Health - EDA", page_icon="📊", layout="wide")
@@ -86,6 +88,25 @@ class DataAnalyzer:
             "Nulos": conteo,
             "% Nulos": (conteo / len(self.df) * 100).round(2),
         })
+
+    def histograma(self, columna, bins=15):
+        fig, ax = plt.subplots(figsize=(7, 4))
+        sns.histplot(self.df[columna], bins=bins, kde=True, color="#3B6FB6", ax=ax)
+        ax.axvline(self.df[columna].mean(), color="#D9534F", linestyle="--", label="Media")
+        ax.axvline(self.df[columna].median(), color="#2E8B57", linestyle=":", label="Mediana")
+        ax.set_title(f"Distribución de {columna}")
+        ax.set_ylabel("Frecuencia")
+        ax.legend()
+        fig.tight_layout()
+        return fig
+
+    def boxplot_escalas(self, columnas):
+        datos = self.df[columnas].melt(var_name="Escala", value_name="Valor")
+        fig, ax = plt.subplots(figsize=(7, 4))
+        sns.boxplot(data=datos, x="Escala", y="Valor", color="#9DB9E0", ax=ax)
+        ax.set_title("Comparación de escalas (1 a 10)")
+        fig.tight_layout()
+        return fig
 
 if "df" not in st.session_state:
     st.session_state.df = None
@@ -288,7 +309,42 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "eliminar las filas (si fueran pocas) o completarlas con la mediana "
                    "(variables numéricas) o la moda (variables categóricas).")
 
-    for i in range(4, 10):
+    with tabs[4]:
+        st.header("Ítem 5: Distribución de variables numéricas")
+        st.write("Con histogramas vemos cómo se reparten los valores de cada variable: "
+                 "dónde se concentran, si son simétricos y si hay valores alejados.")
+
+        numericas, _ = analizador.clasificar_variables()
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            variable_hist = st.selectbox("Variable", numericas, key="hist_var")
+            bins = st.slider("Número de barras", 5, 40, 15)
+            serie = df[variable_hist]
+            st.metric("Media", f"{serie.mean():.2f}")
+            st.metric("Mediana", f"{serie.median():.2f}")
+            st.metric("Asimetría", f"{serie.skew():.2f}")
+        with c2:
+            st.pyplot(analizador.histograma(variable_hist, bins))
+
+        st.info("En todas las variables las barras tienen alturas parecidas: los datos están "
+                "repartidos de forma **pareja (distribución casi uniforme)**, sin un pico central. "
+                "La media y la mediana coinciden (asimetría cercana a 0) y no hay valores "
+                "aislados en los extremos.")
+
+        st.subheader("Comparación de escalas de estrés, ansiedad y dependencia")
+        escalas = ["stress_level", "anxiety_level", "addiction_level"]
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.pyplot(analizador.boxplot_escalas(escalas))
+        with c2:
+            st.dataframe(df[escalas].agg(["mean", "median", "std"]).T.round(2), width="stretch")
+
+        st.success("Las tres escalas usan el mismo rango (1 a 10) y se comportan de forma muy "
+                   "parecida: medianas entre 5 y 6, y la mitad central de los datos entre 3 y 8. "
+                   "Cada nivel tiene aproximadamente la misma cantidad de adolescentes. Esta "
+                   "comparación es descriptiva y no constituye un diagnóstico clínico.")
+
+    for i in range(5, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
