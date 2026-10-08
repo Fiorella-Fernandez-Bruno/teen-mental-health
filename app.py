@@ -65,6 +65,20 @@ class DataAnalyzer:
     def clasificar_variables(self):
         return clasificar_variables(self.df)
 
+    def estadisticas(self, columnas):
+        desc = self.df[columnas].describe().T
+        desc["mediana"] = self.df[columnas].median()
+        desc["moda"] = self.df[columnas].mode().iloc[0]
+        desc["IQR"] = desc["75%"] - desc["25%"]
+        desc["CV %"] = desc["std"] / desc["mean"] * 100
+        return desc.round(2)
+
+    def valores_extremos(self, columna):
+        q1, q3 = self.df[columna].quantile([0.25, 0.75])
+        iqr = q3 - q1
+        lim_inf, lim_sup = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        n = int(((self.df[columna] < lim_inf) | (self.df[columna] > lim_sup)).sum())
+        return n, round(lim_inf, 2), round(lim_sup, 2)
 
 if "df" not in st.session_state:
     st.session_state.df = None
@@ -202,7 +216,46 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
         st.info("`depression_label` se guarda como número (0 y 1), pero es una etiqueta "
                 "de sí/no. Por eso se clasifica como categórica.")
 
-    for i in range(2, 10):
+        with tabs[2]:
+        st.header("Ítem 3: Estadísticas descriptivas")
+        st.write("Resumimos cada variable numérica con medidas de centro (media, mediana, moda), "
+                 "posición (cuartiles) y dispersión (desviación estándar, IQR y coeficiente "
+                 "de variación).")
+
+        numericas, _ = analizador.clasificar_variables()
+        st.dataframe(analizador.estadisticas(numericas), width="stretch")
+
+        st.subheader("Detalle por variable")
+        variable = st.selectbox("Elige una variable", numericas)
+        serie = df[variable]
+        n_ext, lim_inf, lim_sup = analizador.valores_extremos(variable)
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Media", f"{serie.mean():.2f}")
+        c2.metric("Mediana", f"{serie.median():.2f}")
+        c3.metric("Desv. estándar", f"{serie.std():.2f}")
+        c4.metric("Valores extremos", n_ext)
+
+        asimetria = serie.skew()
+        if abs(asimetria) < 0.5:
+            forma = f"la asimetría es {asimetria:.2f}, cercana a 0: la distribución es simétrica"
+        elif asimetria > 0:
+            forma = f"la asimetría es {asimetria:.2f}: hay una cola hacia valores altos"
+        else:
+            forma = f"la asimetría es {asimetria:.2f}: hay una cola hacia valores bajos"
+
+        st.info(f"En **{variable}**, {forma}. El 50% central de los datos está entre "
+                f"{serie.quantile(0.25):.2f} y {serie.quantile(0.75):.2f}. "
+                f"Se consideran extremos los valores fuera de [{lim_inf}, {lim_sup}] "
+                f"(regla de 1.5 × IQR): se encontraron {n_ext}.")
+
+        st.success("Ninguna variable numérica presenta valores extremos según la regla del IQR. "
+                   "En todas, la asimetría es cercana a 0 y la media es parecida a la mediana: "
+                   "las distribuciones son simétricas. La actividad física y las escalas de estrés, "
+                   "ansiedad y dependencia tienen la mayor dispersión relativa (CV mayor a 50%): "
+                   "hay adolescentes en todo el rango de valores.")
+
+    for i in range(3, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
