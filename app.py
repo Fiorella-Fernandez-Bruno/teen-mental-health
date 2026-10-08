@@ -185,6 +185,34 @@ class DataAnalyzer:
         fig.tight_layout()
         return fig
 
+    def contar_condiciones(self):
+        return ((self.df["daily_social_media_hours"] > 5).astype(int)
+                + (self.df["sleep_hours"] < 6).astype(int)
+                + (self.df["stress_level"] >= 7).astype(int)
+                + (self.df["anxiety_level"] >= 7).astype(int))
+
+    def resumen_condiciones(self):
+        condiciones = self.contar_condiciones()
+        tabla = self.df.groupby(condiciones)["depression_label"].agg(["count", "sum"])
+        tabla.columns = ["Adolescentes", "Con etiqueta 1"]
+        tabla["% con etiqueta 1"] = (tabla["Con etiqueta 1"] / tabla["Adolescentes"] * 100).round(1)
+        tabla.index.name = "Condiciones cumplidas"
+        return tabla
+
+    def grafico_condiciones(self):
+        tabla = self.resumen_condiciones()
+        colores = ["#D9534F" if p > 0 else "#9DB9E0" for p in tabla["% con etiqueta 1"]]
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.bar(tabla.index.astype(str), tabla["Adolescentes"], color=colores, edgecolor="black")
+        for i, (n, p) in enumerate(zip(tabla["Adolescentes"], tabla["% con etiqueta 1"])):
+            ax.text(i, n, f"{n}\n({p}% con etiqueta 1)", ha="center", va="bottom", fontsize=8)
+        ax.set_ylim(0, tabla["Adolescentes"].max() * 1.25)
+        ax.set_title("Adolescentes según cuántas condiciones cumplen")
+        ax.set_xlabel("Número de condiciones cumplidas (de 4)")
+        ax.set_ylabel("Adolescentes")
+        fig.tight_layout()
+        return fig
+
 if "df" not in st.session_state:
     st.session_state.df = None
 
@@ -579,9 +607,51 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "Es decir, por sí solos los hábitos no se reflejan en el promedio de estas "
                    "escalas; la asociación más clara está con depression_label (ítem 7).")
 
-    for i in range(9, 10):
-        with tabs[i]:
-            st.info("Pendiente.")
+    with tabs[9]:
+        st.header("Ítem 10: Hallazgos clave")
+        st.write("Reunimos lo encontrado en los ítems anteriores. Contamos cuántas de estas "
+                 "4 condiciones cumple cada adolescente: más de 5 horas diarias en redes, "
+                 "menos de 6 horas de sueño, estrés de 7 o más y ansiedad de 7 o más.")
+
+        resumen = analizador.resumen_condiciones()
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Cumplen las 4 condiciones", int(resumen.loc[4, "Adolescentes"]))
+        c2.metric("De ellos, con etiqueta 1", f"{resumen.loc[4, '% con etiqueta 1']}%")
+        c3.metric("Con etiqueta 1 entre quienes cumplen 3 o menos",
+                  f"{resumen.loc[:3, '% con etiqueta 1'].max()}%")
+
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.pyplot(analizador.grafico_condiciones())
+        with c2:
+            st.dataframe(resumen, width="stretch")
+
+        st.subheader("Insights principales")
+        st.markdown(
+            "1. **La etiqueta aparece solo cuando coinciden las 4 condiciones.** Los 31 casos "
+            "con depression_label = 1 cumplen las 4, y nadie con 3 o menos la tiene.\n"
+            "2. **Ningún factor aislado basta.** 198 adolescentes cumplen 3 condiciones y "
+            "ninguno tiene la etiqueta.\n"
+            "3. **Lo que importa es el tiempo, no la plataforma.** Instagram, TikTok o ambas "
+            "muestran porcentajes casi iguales (ítem 8).\n"
+            "4. **Las horas de redes y de sueño marcan la diferencia** entre grupos (ítem 7), "
+            "aunque por sí solas no cambian el promedio de estrés o ansiedad (ítem 9).\n"
+            "5. **Rendimiento académico y actividad física no se diferencian** entre grupos."
+        )
+
+        st.subheader("Recomendaciones de interpretación")
+        st.markdown(
+            "- Mirar la **combinación** de hábitos y bienestar, no cada variable por separado.\n"
+            "- Priorizar acciones sobre **horas de uso de redes y horas de sueño**, más que "
+            "sobre una plataforma específica.\n"
+            "- Interpretar con cautela: el grupo con etiqueta 1 es pequeño (2.6%) y el patrón "
+            "es propio de este dataset.\n"
+            "- Usar estos resultados para **orientar preguntas y seguimiento**, no para "
+            "predecir ni diagnosticar."
+        )
+
+        st.info("⚠️ Estos hallazgos son exploratorios y educativos. No constituyen un "
+                "diagnóstico clínico ni sustituyen la valoración de profesionales de la salud.")
 
 
 elif modulo == "✅ Conclusiones":
