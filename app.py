@@ -260,8 +260,8 @@ if modulo == "Home":
             "ni sustituyen la valoración de profesionales de la salud.")
 
 
-elif modulo == "📂 Carga del dataset":
-    st.title("📂 Carga del dataset")
+elif modulo == "Carga del dataset":
+    st.title("Carga del dataset")
     st.write("Sube el archivo `Teen_Mental_Health_Dataset.csv` para habilitar el análisis.")
 
     archivo = st.file_uploader("Selecciona el archivo CSV", type=["csv"])
@@ -289,8 +289,8 @@ elif modulo == "📂 Carga del dataset":
         st.info("Aún no se ha cargado ningún archivo.")
 
 
-elif modulo == "🔍 Análisis Exploratorio (EDA)":
-    st.title("🔍 Análisis Exploratorio de Datos")
+elif modulo == "Análisis Exploratorio (EDA)":
+    st.title("Análisis Exploratorio de Datos")
 
     if st.session_state.df is None:
         st.warning("Primero carga el dataset en el módulo **📂 Carga del dataset**.")
@@ -654,8 +654,8 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                 "diagnóstico clínico ni sustituyen la valoración de profesionales de la salud.")
 
 
-elif modulo == "✅ Conclusiones":
-    st.title("✅ Conclusiones")
+elif modulo == "Conclusiones":
+    st.title("Conclusiones")
 
     if st.session_state.df is None:
         st.warning("Primero carga el dataset en el módulo **📂 Carga del dataset**.")
