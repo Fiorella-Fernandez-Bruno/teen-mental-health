@@ -139,6 +139,30 @@ class DataAnalyzer:
         fig.tight_layout()
         return fig
 
+    def tabla_cruzada(self, fila, columna, porcentaje=True):
+        if porcentaje:
+            return (pd.crosstab(self.df[fila], self.df[columna], normalize="index") * 100).round(1)
+        return pd.crosstab(self.df[fila], self.df[columna], margins=True, margins_name="Total")
+
+    def grafico_cruzado(self, fila, columna):
+        tabla = self.tabla_cruzada(fila, columna)
+        fig, ax = plt.subplots(figsize=(7, 4))
+        if columna == "depression_label":
+            sns.barplot(x=tabla.index, y=tabla[1], color="#D9534F", ax=ax)
+            for i, valor in enumerate(tabla[1]):
+                ax.text(i, valor, f"{valor}%", ha="center", va="bottom")
+            ax.set_ylim(0, tabla[1].max() * 1.3)
+            ax.set_ylabel("% con depression_label = 1")
+        else:
+            tabla.plot(kind="bar", ax=ax, colormap="Blues", edgecolor="black")
+            ax.set_ylabel("% dentro de cada grupo")
+            ax.legend(title=columna)
+            plt.xticks(rotation=0)
+        ax.set_title(f"{columna} según {fila}")
+        ax.set_xlabel(fila)
+        fig.tight_layout()
+        return fig
+
 if "df" not in st.session_state:
     st.session_state.df = None
 
@@ -439,7 +463,39 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "iguales en ambos grupos. Son asociaciones observadas en los datos, no "
                    "relaciones de causa y efecto.")
 
-    for i in range(7, 10):
+    with tabs[7]:
+        st.header("Ítem 8: Análisis bivariado (categórico vs categórico)")
+        st.write("Cruzamos dos variables categóricas para ver si la distribución de una "
+                 "cambia según los grupos de la otra. Usamos porcentajes por fila para "
+                 "comparar grupos de distinto tamaño.")
+
+        comparaciones = {
+            "Plataforma vs depression_label": ("platform_usage", "depression_label"),
+            "Interacción social vs depression_label": ("social_interaction_level", "depression_label"),
+            "Género vs plataforma": ("gender", "platform_usage"),
+        }
+        eleccion = st.selectbox("Comparación", list(comparaciones.keys()), key="cruce")
+        fila, columna = comparaciones[eleccion]
+
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.pyplot(analizador.grafico_cruzado(fila, columna))
+        with c2:
+            st.write("**Porcentaje por fila**")
+            st.dataframe(analizador.tabla_cruzada(fila, columna), width="stretch")
+            if st.checkbox("Mostrar conteos absolutos", key="conteos"):
+                st.dataframe(analizador.tabla_cruzada(fila, columna, porcentaje=False),
+                             width="stretch")
+
+        st.success("El porcentaje con depression_label = 1 es muy parecido en todas las "
+                   "plataformas (entre 2.3% y 3.0%) y en todos los niveles de interacción "
+                   "social (entre 2.2% y 2.9%). Hombres y mujeres usan Instagram, TikTok y "
+                   "ambas en proporciones casi iguales (alrededor de un tercio cada una). "
+                   "En este dataset, la plataforma y el nivel de interacción social no "
+                   "marcan diferencias; las diferencias aparecen en las horas de uso y de "
+                   "sueño (ítem 7).")
+
+    for i in range(8, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
