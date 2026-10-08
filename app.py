@@ -661,4 +661,52 @@ elif modulo == "✅ Conclusiones":
         st.warning("Primero carga el dataset en el módulo **📂 Carga del dataset**.")
         st.stop()
 
-    st.info("Pendiente.")
+    analizador = DataAnalyzer(st.session_state.df)
+    st.write("Cinco conclusiones basadas en el análisis exploratorio. Cada una se vincula con "
+             "una evidencia visual o estadística; despliega cada una para verla.")
+
+    with st.expander("1. La base de datos es confiable y completa", expanded=True):
+        st.write("Los 1,200 registros están completos: no hay valores nulos, duplicados ni "
+                 "valores extremos, y todas las variables tienen distribuciones simétricas. "
+                 "**Decisión:** los resultados pueden usarse sin limpieza previa, sabiendo "
+                 "que representan a todo el grupo analizado.")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Registros", f"{len(analizador.df):,}")
+        c2.metric("Valores nulos", int(analizador.df.isna().sum().sum()))
+        c3.metric("Duplicados", analizador.duplicados())
+        st.caption("Evidencia: ítems 1, 3 y 4.")
+
+    with st.expander("2. Más horas en redes sociales se asocian con la etiqueta"):
+        st.write("El grupo con depression_label = 1 usa redes 7.0 horas al día (mediana), "
+                 "frente a 4.4 horas del resto. Ningún adolescente con 5 horas o menos tiene "
+                 "la etiqueta. **Decisión:** las acciones de prevención deberían enfocarse en "
+                 "el tiempo diario de uso de redes.")
+        st.pyplot(analizador.boxplot_por_grupo("daily_social_media_hours", "depression_label"))
+        st.caption("Evidencia: ítem 7.")
+
+    with st.expander("3. Dormir menos también se asocia con la etiqueta"):
+        st.write("El grupo con depression_label = 1 duerme 4.6 horas (mediana), frente a 6.5 "
+                 "horas del resto. Nadie que duerma 6 horas o más tiene la etiqueta. "
+                 "**Decisión:** promover hábitos de sueño es tan relevante como reducir el "
+                 "tiempo en redes.")
+        st.pyplot(analizador.boxplot_por_grupo("sleep_hours", "depression_label"))
+        st.caption("Evidencia: ítem 7.")
+
+    with st.expander("4. La plataforma usada no marca diferencias"):
+        st.write("El porcentaje con depression_label = 1 va de 2.3% a 3.0% entre Instagram, "
+                 "TikTok y ambas, una diferencia mínima. **Decisión:** las acciones deben "
+                 "centrarse en cuánto tiempo se usan las redes, no en cuál se usa.")
+        st.pyplot(analizador.grafico_cruzado("platform_usage", "depression_label"))
+        st.caption("Evidencia: ítem 8.")
+
+    with st.expander("5. Lo que importa es la combinación de factores"):
+        st.write("La etiqueta aparece solo en los 31 adolescentes que cumplen a la vez 4 "
+                 "condiciones: más de 5 horas en redes, menos de 6 horas de sueño, estrés de "
+                 "7 o más y ansiedad de 7 o más. Ninguno de los 198 que cumplen 3 condiciones "
+                 "la tiene. **Decisión:** el seguimiento debe mirar perfiles completos y no "
+                 "un solo indicador aislado.")
+        st.pyplot(analizador.grafico_condiciones())
+        st.caption("Evidencia: ítem 10.")
+
+    st.info("⚠️ Conclusiones exploratorias y educativas. No constituyen un diagnóstico clínico "
+            "ni sustituyen la valoración de profesionales de la salud.")
