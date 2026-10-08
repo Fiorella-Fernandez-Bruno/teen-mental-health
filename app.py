@@ -108,6 +108,26 @@ class DataAnalyzer:
         fig.tight_layout()
         return fig
 
+    def frecuencias(self, columna):
+        conteo = self.df[columna].value_counts()
+        return pd.DataFrame({
+            "Frecuencia": conteo,
+            "Proporción (%)": (conteo / len(self.df) * 100).round(1),
+        })
+
+    def barras(self, columna):
+        tabla = self.frecuencias(columna)
+        fig, ax = plt.subplots(figsize=(7, 4))
+        sns.barplot(x=tabla.index.astype(str), y=tabla["Frecuencia"], color="#3B6FB6", ax=ax)
+        for i, (n, p) in enumerate(zip(tabla["Frecuencia"], tabla["Proporción (%)"])):
+            ax.text(i, n, f"{n} ({p}%)", ha="center", va="bottom")
+        ax.set_ylim(0, tabla["Frecuencia"].max() * 1.15)
+        ax.set_title(f"Frecuencia de {columna}")
+        ax.set_xlabel(columna)
+        ax.set_ylabel("Frecuencia")
+        fig.tight_layout()
+        return fig
+
 if "df" not in st.session_state:
     st.session_state.df = None
 
@@ -344,7 +364,36 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "Cada nivel tiene aproximadamente la misma cantidad de adolescentes. Esta "
                    "comparación es descriptiva y no constituye un diagnóstico clínico.")
 
-    for i in range(5, 10):
+    with tabs[5]:
+        st.header("Ítem 6: Análisis de variables categóricas")
+        st.write("Contamos cuántos adolescentes hay en cada categoría y qué proporción "
+                 "representan del total.")
+
+        _, categoricas = analizador.clasificar_variables()
+        variable_cat = st.selectbox("Variable categórica", categoricas, key="cat_var")
+
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.pyplot(analizador.barras(variable_cat))
+        with c2:
+            st.dataframe(analizador.frecuencias(variable_cat), width="stretch")
+
+        st.info("**gender**, **platform_usage** y **social_interaction_level** están "
+                "equilibradas: cada categoría reúne entre el 30% y el 50% de los registros. "
+                "Esto permite comparar los grupos entre sí en igualdad de condiciones.")
+
+        st.subheader("Categoría clave: depression_label")
+        positivos = int(df["depression_label"].sum())
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Etiqueta 0 (ausencia)", f"{len(df) - positivos:,}")
+        c2.metric("Etiqueta 1 (presencia)", positivos)
+        c3.metric("% con etiqueta 1", f"{positivos / len(df) * 100:.1f}%")
+
+        st.success(f"Solo {positivos} de {len(df):,} registros tienen depression_label = 1. "
+                   "Es un grupo pequeño, por lo que en las comparaciones siguientes se usarán "
+                   "porcentajes y se interpretarán los resultados con cautela.")
+
+    for i in range(6, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
