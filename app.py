@@ -80,6 +80,13 @@ class DataAnalyzer:
         n = int(((self.df[columna] < lim_inf) | (self.df[columna] > lim_sup)).sum())
         return n, round(lim_inf, 2), round(lim_sup, 2)
 
+    def faltantes(self):
+        conteo = self.df.isna().sum()
+        return pd.DataFrame({
+            "Nulos": conteo,
+            "% Nulos": (conteo / len(self.df) * 100).round(2),
+        })
+
 if "df" not in st.session_state:
     st.session_state.df = None
 
@@ -255,7 +262,33 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "ansiedad y dependencia tienen la mayor dispersión relativa (CV mayor a 50%): "
                    "hay adolescentes en todo el rango de valores.")
 
-    for i in range(3, 10):
+    with tabs[3]:
+        st.header("Ítem 4: Análisis de valores faltantes")
+        st.write("Contamos cuántos datos vacíos tiene cada variable y qué porcentaje "
+                 "representan sobre el total de registros.")
+
+        tabla_nulos = analizador.faltantes()
+        total_nulos = int(tabla_nulos["Nulos"].sum())
+
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.dataframe(tabla_nulos, width="stretch")
+        with c2:
+            st.metric("Total de valores nulos", total_nulos)
+            st.metric("Variables con nulos", int((tabla_nulos["Nulos"] > 0).sum()))
+
+        if total_nulos > 0:
+            st.bar_chart(tabla_nulos["% Nulos"])
+        else:
+            st.info("No se muestra gráfico porque ninguna variable tiene valores faltantes.")
+
+        st.success("El dataset no tiene valores faltantes, así que no es necesario eliminar "
+                   "registros ni completar datos. Se conservan los 1,200 registros, y todos "
+                   "los análisis usan la misma base. Si existieran nulos, las opciones serían "
+                   "eliminar las filas (si fueran pocas) o completarlas con la mediana "
+                   "(variables numéricas) o la moda (variables categóricas).")
+
+    for i in range(4, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
