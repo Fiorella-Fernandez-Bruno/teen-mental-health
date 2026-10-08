@@ -128,6 +128,17 @@ class DataAnalyzer:
         fig.tight_layout()
         return fig
 
+    def comparar_grupos(self, columna_num, columna_grupo):
+        return (self.df.groupby(columna_grupo)[columna_num]
+                .agg(["count", "mean", "median", "std", "min", "max"]).round(2))
+
+    def boxplot_por_grupo(self, columna_num, columna_grupo):
+        fig, ax = plt.subplots(figsize=(7, 4))
+        sns.boxplot(data=self.df, x=columna_grupo, y=columna_num, color="#9DB9E0", ax=ax)
+        ax.set_title(f"{columna_num} según {columna_grupo}")
+        fig.tight_layout()
+        return fig
+
 if "df" not in st.session_state:
     st.session_state.df = None
 
@@ -393,7 +404,42 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "Es un grupo pequeño, por lo que en las comparaciones siguientes se usarán "
                    "porcentajes y se interpretarán los resultados con cautela.")
 
-    for i in range(6, 10):
+    with tabs[6]:
+        st.header("Ítem 7: Análisis bivariado (numérico vs categórico)")
+        st.write("Comparamos una variable numérica entre los grupos de una variable "
+                 "categórica, para ver si sus valores cambian de un grupo a otro.")
+
+        st.subheader("Promedios según depression_label")
+        variables_clave = ["daily_social_media_hours", "sleep_hours",
+                           "academic_performance", "physical_activity"]
+        resumen = df.groupby("depression_label")[variables_clave].mean().T.round(2)
+        resumen.columns = ["Etiqueta 0", "Etiqueta 1"]
+        resumen["Diferencia"] = (resumen["Etiqueta 1"] - resumen["Etiqueta 0"]).round(2)
+        st.dataframe(resumen, width="stretch")
+
+        st.subheader("Comparación interactiva")
+        numericas, categoricas = analizador.clasificar_variables()
+        c1, c2 = st.columns(2)
+        with c1:
+            var_num = st.selectbox("Variable numérica", numericas,
+                                   index=numericas.index("daily_social_media_hours"), key="biv_num")
+        with c2:
+            var_grupo = st.selectbox("Agrupar por", categoricas,
+                                     index=categoricas.index("depression_label"), key="biv_cat")
+
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.pyplot(analizador.boxplot_por_grupo(var_num, var_grupo))
+        with c2:
+            st.dataframe(analizador.comparar_grupos(var_num, var_grupo), width="stretch")
+
+        st.success("El grupo con depression_label = 1 usa más redes sociales (mediana de 7.0 "
+                   "horas frente a 4.4) y duerme menos (mediana de 4.6 horas frente a 6.5). "
+                   "En cambio, el rendimiento académico y la actividad física son prácticamente "
+                   "iguales en ambos grupos. Son asociaciones observadas en los datos, no "
+                   "relaciones de causa y efecto.")
+
+    for i in range(7, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
