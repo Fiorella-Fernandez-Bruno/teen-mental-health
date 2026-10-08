@@ -163,6 +163,28 @@ class DataAnalyzer:
         fig.tight_layout()
         return fig
 
+    def filtrar(self, edades, generos, plataformas, interacciones):
+        d = self.df
+        d = d[d["age"].between(edades[0], edades[1])]
+        d = d[d["gender"].isin(generos)]
+        d = d[d["platform_usage"].isin(plataformas)]
+        d = d[d["social_interaction_level"].isin(interacciones)]
+        return d
+
+    def promedio_por_tramos(self, habito, bienestar):
+        tramos = pd.qcut(self.df[habito], 4, duplicates="drop")
+        return self.df.groupby(tramos, observed=True)[bienestar].agg(["count", "mean"]).round(2)
+
+    def grafico_tramos(self, habito, bienestar):
+        tabla = self.promedio_por_tramos(habito, bienestar)
+        fig, ax = plt.subplots(figsize=(7, 4))
+        sns.barplot(x=tabla.index.astype(str), y=tabla["mean"], color="#3B6FB6", ax=ax)
+        ax.set_title(f"Promedio de {bienestar} por tramos de {habito}")
+        ax.set_xlabel(f"Tramos de {habito}")
+        ax.set_ylabel(f"Promedio de {bienestar}")
+        fig.tight_layout()
+        return fig
+
 if "df" not in st.session_state:
     st.session_state.df = None
 
@@ -495,7 +517,69 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
                    "marcan diferencias; las diferencias aparecen en las horas de uso y de "
                    "sueño (ítem 7).")
 
-    for i in range(8, 10):
+    with tabs[8]:
+        st.header("Ítem 9: Análisis basado en parámetros seleccionados")
+        st.write("Filtra a los adolescentes según su perfil y elige una variable de bienestar "
+                 "y una de hábitos para ver cómo se relacionan en el grupo seleccionado.")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            edades = st.slider("Rango de edad", 13, 19, (13, 19))
+            generos = st.multiselect("Género", ["female", "male"], default=["female", "male"])
+        with c2:
+            plataformas = st.multiselect("Plataforma", ["Instagram", "TikTok", "Both"],
+                                         default=["Instagram", "TikTok", "Both"])
+            interacciones = st.multiselect("Interacción social", ["low", "medium", "high"],
+                                           default=["low", "medium", "high"])
+
+        c1, c2 = st.columns(2)
+        with c1:
+            bienestar = st.selectbox("Variable de bienestar",
+                                     ["stress_level", "anxiety_level", "addiction_level",
+                                      "academic_performance"], key="bienestar")
+        with c2:
+            habito = st.selectbox("Variable de hábitos",
+                                  ["daily_social_media_hours", "screen_time_before_sleep",
+                                   "sleep_hours", "physical_activity"], key="habito")
+
+        filtrado = DataAnalyzer(analizador.filtrar(edades, generos, plataformas, interacciones))
+        datos = filtrado.df
+
+        if len(datos) < 20:
+            st.warning("Hay muy pocos registros con estos filtros. Amplía la selección.")
+        else:
+            correlacion = datos[habito].corr(datos[bienestar])
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Registros", f"{len(datos):,}")
+            c2.metric(f"Promedio {habito}", f"{datos[habito].mean():.2f}")
+            c3.metric(f"Promedio {bienestar}", f"{datos[bienestar].mean():.2f}")
+            c4.metric("Correlación", f"{correlacion:.2f}")
+
+            c1, c2 = st.columns([2, 1])
+            with c1:
+                st.pyplot(filtrado.grafico_tramos(habito, bienestar))
+            with c2:
+                st.write("**Promedio por tramo**")
+                st.dataframe(filtrado.promedio_por_tramos(habito, bienestar), width="stretch")
+
+            if abs(correlacion) < 0.1:
+                fuerza = "prácticamente no hay relación"
+            elif abs(correlacion) < 0.3:
+                fuerza = "hay una relación débil"
+            else:
+                fuerza = "hay una relación moderada o fuerte"
+
+            st.info(f"En los {len(datos):,} registros seleccionados, la correlación entre "
+                    f"**{habito}** y **{bienestar}** es {correlacion:.2f}: {fuerza}. "
+                    f"Si las barras tienen alturas parecidas, el promedio de {bienestar} "
+                    f"no cambia aunque cambie {habito}.")
+
+        st.success("Con todos los registros, las correlaciones entre los hábitos y las escalas "
+                   "de estrés, ansiedad, dependencia y rendimiento académico son cercanas a 0. "
+                   "Es decir, por sí solos los hábitos no se reflejan en el promedio de estas "
+                   "escalas; la asociación más clara está con depression_label (ítem 7).")
+
+    for i in range(9, 10):
         with tabs[i]:
             st.info("Pendiente.")
 
