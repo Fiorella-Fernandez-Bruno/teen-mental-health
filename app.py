@@ -216,7 +216,7 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
         st.info("`depression_label` se guarda como número (0 y 1), pero es una etiqueta "
                 "de sí/no. Por eso se clasifica como categórica.")
 
-        with tabs[2]:
+    with tabs[2]:
         st.header("Ítem 3: Estadísticas descriptivas")
         st.write("Resumimos cada variable numérica con medidas de centro (media, mediana, moda), "
                  "posición (cuartiles) y dispersión (desviación estándar, IQR y coeficiente "
