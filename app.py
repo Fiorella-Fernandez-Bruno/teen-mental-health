@@ -1,22 +1,10 @@
-"""
-Caso de Estudio N°4 - Teen Mental Health
-EDA interactivo con Streamlit
-Especialización en Python for Analytics - DMC Institute
-"""
-
 import io
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import streamlit as st
 
-# =====================================================================
-# CONFIGURACIÓN GENERAL
-# =====================================================================
 st.set_page_config(page_title="Teen Mental Health - EDA", page_icon="📊", layout="wide")
-sns.set_theme(style="whitegrid")
 
 AUTOR = "Fiorella Fernández Bruno"
 CURSO = "Especialización en Python for Analytics - DMC Institute"
@@ -28,25 +16,23 @@ COLUMNAS_ESPERADAS = [
     "social_interaction_level", "stress_level", "anxiety_level",
     "addiction_level", "depression_label",
 ]
-VARIABLES_BIENESTAR = ["stress_level", "anxiety_level", "addiction_level", "sleep_hours"]
-VARIABLES_HABITOS = ["daily_social_media_hours", "screen_time_before_sleep",
-                     "physical_activity", "academic_performance"]
 
 
-# =====================================================================
-# CLASE PRINCIPAL (POO)
-# =====================================================================
+def clasificar_variables(df):
+    numericas = df.select_dtypes(include=np.number).columns.tolist()
+    categoricas = df.select_dtypes(exclude=np.number).columns.tolist()
+    if "depression_label" in numericas:
+        numericas.remove("depression_label")
+        categoricas.append("depression_label")
+    return numericas, categoricas
+
+
 class DataAnalyzer:
-    """Encapsula carga, validación, clasificación, estadísticas,
-    visualizaciones y filtros del dataset."""
-
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df):
         self.df = df
 
-    # ---------- Carga y validación ----------
     @staticmethod
     def cargar_csv(archivo):
-        """Lee el CSV subido. Devuelve (DataFrame, mensaje_error)."""
         try:
             df = pd.read_csv(archivo)
         except Exception as e:
@@ -55,13 +41,12 @@ class DataAnalyzer:
             return None, "El archivo está vacío."
         faltantes = [c for c in COLUMNAS_ESPERADAS if c not in df.columns]
         if faltantes:
-            return None, f"Faltan columnas esperadas: {', '.join(faltantes)}"
+            return None, f"Faltan columnas: {', '.join(faltantes)}"
         return df, None
 
     def dimensiones(self):
         return self.df.shape
 
-    # ---------- Información general ----------
     def info_texto(self):
         buffer = io.StringIO()
         self.df.info(buf=buffer)
@@ -77,115 +62,13 @@ class DataAnalyzer:
     def duplicados(self):
         return int(self.df.duplicated().sum())
 
-    # ---------- Clasificación de variables ----------
     def clasificar_variables(self):
-        """Separa numéricas y categóricas. depression_label es 0/1:
-        se trata como categórica (etiqueta), aunque esté guardada como entero."""
-        numericas = self.df.select_dtypes(include=np.number).columns.tolist()
-        categoricas = self.df.select_dtypes(exclude=np.number).columns.tolist()
-        if "depression_label" in numericas:
-            numericas.remove("depression_label")
-            categoricas.append("depression_label")
-        return numericas, categoricas
-
-    # ---------- Estadísticas ----------
-    def estadisticas(self, columnas=None):
-        columnas = columnas or self.clasificar_variables()[0]
-        desc = self.df[columnas].describe().T
-        desc["mediana"] = self.df[columnas].median()
-        desc["moda"] = self.df[columnas].mode().iloc[0]
-        desc["rango_IQR"] = desc["75%"] - desc["25%"]
-        return desc.round(2)
-
-    def valores_extremos(self, columna):
-        """Cuenta valores fuera de [Q1 - 1.5*IQR, Q3 + 1.5*IQR]."""
-        q1, q3 = self.df[columna].quantile([0.25, 0.75])
-        iqr = q3 - q1
-        lim_inf, lim_sup = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-        n = int(((self.df[columna] < lim_inf) | (self.df[columna] > lim_sup)).sum())
-        return n, lim_inf, lim_sup
-
-    def faltantes(self):
-        conteo = self.df.isna().sum()
-        return pd.DataFrame({"Nulos": conteo,
-                             "% Nulos": (conteo / len(self.df) * 100).round(2)})
-
-    def frecuencias(self, columna):
-        conteo = self.df[columna].value_counts()
-        return pd.DataFrame({"Frecuencia": conteo,
-                             "Proporción (%)": (conteo / len(self.df) * 100).round(1)})
-
-    # ---------- Filtros y comparaciones ----------
-    def filtrar(self, edad=None, generos=None, plataformas=None, interaccion=None):
-        d = self.df
-        if edad:
-            d = d[d["age"].between(edad[0], edad[1])]
-        if generos:
-            d = d[d["gender"].isin(generos)]
-        if plataformas:
-            d = d[d["platform_usage"].isin(plataformas)]
-        if interaccion:
-            d = d[d["social_interaction_level"].isin(interaccion)]
-        return d
-
-    def comparar_grupos(self, columna_num, columna_grupo):
-        return (self.df.groupby(columna_grupo)[columna_num]
-                .agg(["count", "mean", "median", "std"]).round(2))
-
-    def tabla_cruzada(self, fila, columna, normalizar=True):
-        return (pd.crosstab(self.df[fila], self.df[columna],
-                            normalize="index" if normalizar else False) * (100 if normalizar else 1)).round(1)
-
-    # ---------- Visualizaciones ----------
-    def histograma(self, columna, bins=20):
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        sns.histplot(self.df[columna], bins=bins, kde=True, ax=ax, color="#3B6FB6")
-        ax.axvline(self.df[columna].mean(), color="#D9534F", ls="--", label="Media")
-        ax.axvline(self.df[columna].median(), color="#2E8B57", ls=":", label="Mediana")
-        ax.set_title(f"Distribución de {columna}")
-        ax.legend()
-        fig.tight_layout()
-        return fig
-
-    def barras(self, columna):
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        orden = self.df[columna].value_counts().index
-        sns.countplot(data=self.df, x=columna, order=orden, ax=ax, color="#3B6FB6")
-        for p in ax.patches:
-            ax.annotate(f"{int(p.get_height())}", (p.get_x() + p.get_width() / 2, p.get_height()),
-                        ha="center", va="bottom", fontsize=9)
-        ax.set_title(f"Frecuencia de {columna}")
-        fig.tight_layout()
-        return fig
-
-    def boxplot_por_grupo(self, columna_num, columna_grupo):
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        sns.boxplot(data=self.df, x=columna_grupo, y=columna_num, ax=ax, color="#9DB9E0")
-        ax.set_title(f"{columna_num} según {columna_grupo}")
-        fig.tight_layout()
-        return fig
-
-    def barras_apiladas(self, fila, columna):
-        tabla = self.tabla_cruzada(fila, columna)
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        tabla.plot(kind="bar", stacked=True, ax=ax, colormap="Blues", edgecolor="white")
-        ax.set_ylabel("% dentro de cada grupo")
-        ax.set_title(f"{columna} por {fila}")
-        ax.legend(title=columna, bbox_to_anchor=(1.02, 1), loc="upper left")
-        plt.xticks(rotation=0)
-        fig.tight_layout()
-        return fig
+        return clasificar_variables(self.df)
 
 
-# =====================================================================
-# ESTADO DE LA SESIÓN (para no perder el archivo al navegar)
-# =====================================================================
 if "df" not in st.session_state:
     st.session_state.df = None
 
-# =====================================================================
-# SIDEBAR - MENÚ PRINCIPAL
-# =====================================================================
 st.sidebar.title("📊 Teen Mental Health")
 st.sidebar.caption("Análisis Exploratorio de Datos")
 modulo = st.sidebar.radio(
@@ -199,20 +82,15 @@ else:
     st.sidebar.warning("Dataset no cargado")
 st.sidebar.caption(f"{AUTOR} · {ANIO}")
 
-# =====================================================================
-# MÓDULO 1: HOME
-# =====================================================================
+
 if modulo == "🏠 Home":
     st.title("Hábitos digitales y bienestar en adolescentes")
     st.subheader("Análisis Exploratorio de Datos con Python y Streamlit")
-
     st.markdown(
-        """
-        **Objetivo del análisis:** explorar cómo se relacionan los hábitos digitales
-        (uso de redes sociales, pantalla antes de dormir), el descanso, la actividad física
-        y la interacción social con las variables de bienestar registradas en el dataset.
-        El enfoque es **exploratorio y educativo**: no se construyen modelos predictivos.
-        """
+        "**Objetivo del análisis:** explorar cómo se relacionan los hábitos digitales "
+        "(uso de redes sociales, pantalla antes de dormir), el descanso, la actividad física "
+        "y la interacción social con las variables de bienestar registradas en el dataset. "
+        "El enfoque es **exploratorio y educativo**: no se construyen modelos predictivos."
     )
 
     col1, col2 = st.columns(2)
@@ -225,26 +103,21 @@ if modulo == "🏠 Home":
 
     st.markdown("#### 📁 Sobre el dataset")
     st.markdown(
-        """
-        `Teen_Mental_Health_Dataset.csv` contiene **1,200 registros y 13 variables** sobre
-        adolescentes de 13 a 19 años: uso diario de redes sociales, plataforma utilizada,
-        horas de sueño, pantalla antes de dormir, rendimiento académico, actividad física,
-        interacción social, escalas de estrés, ansiedad y dependencia (1 a 10) y la
-        etiqueta binaria `depression_label`.
-        """
+        "`Teen_Mental_Health_Dataset.csv` contiene **1,200 registros y 13 variables** sobre "
+        "adolescentes de 13 a 19 años: uso diario de redes sociales, plataforma utilizada, "
+        "horas de sueño, pantalla antes de dormir, rendimiento académico, actividad física, "
+        "interacción social, escalas de estrés, ansiedad y dependencia (1 a 10) y la "
+        "etiqueta binaria `depression_label`."
     )
     st.info("⚠️ Los resultados son exploratorios. No constituyen un diagnóstico clínico "
             "ni sustituyen la valoración de profesionales de la salud.")
 
-# =====================================================================
-# MÓDULO 2: CARGA DEL DATASET
-# =====================================================================
+
 elif modulo == "📂 Carga del dataset":
     st.title("📂 Carga del dataset")
     st.write("Sube el archivo `Teen_Mental_Health_Dataset.csv` para habilitar el análisis.")
 
     archivo = st.file_uploader("Selecciona el archivo CSV", type=["csv"])
-
     if archivo is not None:
         df, error = DataAnalyzer.cargar_csv(archivo)
         if error:
@@ -268,9 +141,7 @@ elif modulo == "📂 Carga del dataset":
     else:
         st.info("Aún no se ha cargado ningún archivo.")
 
-# =====================================================================
-# MÓDULO 3: EDA
-# =====================================================================
+
 elif modulo == "🔍 Análisis Exploratorio (EDA)":
     st.title("🔍 Análisis Exploratorio de Datos")
 
@@ -279,11 +150,63 @@ elif modulo == "🔍 Análisis Exploratorio (EDA)":
         st.stop()
 
     analizador = DataAnalyzer(st.session_state.df)
-    st.info("Los 10 ítems de análisis se construyen en el siguiente paso.")
+    df = analizador.df
 
-# =====================================================================
-# MÓDULO 4: CONCLUSIONES
-# =====================================================================
+    tabs = st.tabs([
+        "1. Info general", "2. Variables", "3. Estadísticas", "4. Faltantes",
+        "5. Numéricas", "6. Categóricas", "7. Num vs Cat", "8. Cat vs Cat",
+        "9. Filtros", "10. Hallazgos",
+    ])
+
+    with tabs[0]:
+        st.header("Ítem 1: Información general del dataset")
+        st.write("Revisamos la estructura del archivo: qué columnas tiene, de qué tipo "
+                 "es cada una y si hay datos vacíos o filas repetidas.")
+
+        filas, columnas = analizador.dimensiones()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Filas", f"{filas:,}")
+        c2.metric("Columnas", columnas)
+        c3.metric("Valores nulos", int(df.isna().sum().sum()))
+        c4.metric("Duplicados", analizador.duplicados())
+
+        st.subheader("Tipos de datos y valores nulos por columna")
+        st.dataframe(analizador.resumen_tipos(), width="stretch")
+
+        if st.checkbox("Mostrar salida completa de df.info()"):
+            st.code(analizador.info_texto())
+
+        st.success(f"El dataset tiene {filas:,} registros y {columnas} variables, "
+                   f"sin valores nulos ni duplicados.")
+
+    with tabs[1]:
+        st.header("Ítem 2: Clasificación de variables")
+        st.write("Separamos las columnas en **numéricas** (cantidades que se pueden "
+                 "promediar) y **categóricas** (grupos o etiquetas) con la función "
+                 "personalizada `clasificar_variables()`.")
+
+        numericas, categoricas = analizador.clasificar_variables()
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Variables numéricas", len(numericas))
+            st.dataframe(pd.DataFrame({"Variable": numericas,
+                                       "Tipo": [str(df[c].dtype) for c in numericas]}),
+                         hide_index=True, width="stretch")
+        with c2:
+            st.metric("Variables categóricas", len(categoricas))
+            st.dataframe(pd.DataFrame({"Variable": categoricas,
+                                       "Categorías": [df[c].nunique() for c in categoricas]}),
+                         hide_index=True, width="stretch")
+
+        st.info("`depression_label` se guarda como número (0 y 1), pero es una etiqueta "
+                "de sí/no. Por eso se clasifica como categórica.")
+
+    for i in range(2, 10):
+        with tabs[i]:
+            st.info("Pendiente.")
+
+
 elif modulo == "✅ Conclusiones":
     st.title("✅ Conclusiones")
 
@@ -291,4 +214,4 @@ elif modulo == "✅ Conclusiones":
         st.warning("Primero carga el dataset en el módulo **📂 Carga del dataset**.")
         st.stop()
 
-    st.info("Las 5 conclusiones se redactan al terminar el EDA.")
+    st.info("Pendiente.")
