@@ -220,7 +220,7 @@ st.sidebar.title("📊 Teen Mental Health")
 st.sidebar.caption("Análisis Exploratorio de Datos")
 modulo = st.sidebar.radio(
     "Navegación",
-    ["🏠 Home", "📂 Carga del dataset", "🔍 Análisis Exploratorio (EDA)", "✅ Conclusiones"],
+    ["Home", "Carga del dataset", "Análisis Exploratorio (EDA)", "Conclusiones"],
 )
 st.sidebar.divider()
 if st.session_state.df is not None:
@@ -230,7 +230,7 @@ else:
 st.sidebar.caption(f"{AUTOR} · {ANIO}")
 
 
-if modulo == "🏠 Home":
+if modulo == "Home":
     st.title("Hábitos digitales y bienestar en adolescentes")
     st.subheader("Análisis Exploratorio de Datos con Python y Streamlit")
     st.markdown(
@@ -242,13 +242,13 @@ if modulo == "🏠 Home":
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("#### 👤 Autor")
+        st.markdown("#### Autor")
         st.markdown(f"- **Nombre:** {AUTOR}\n- **Curso:** {CURSO}\n- **Año:** {ANIO}")
     with col2:
-        st.markdown("#### 🛠️ Tecnologías utilizadas")
+        st.markdown("#### Tecnologías utilizadas")
         st.markdown("- Python\n- Pandas y NumPy\n- Matplotlib y Seaborn\n- Streamlit")
 
-    st.markdown("#### 📁 Sobre el dataset")
+    st.markdown("#### Sobre el dataset")
     st.markdown(
         "`Teen_Mental_Health_Dataset.csv` contiene **1,200 registros y 13 variables** sobre "
         "adolescentes de 13 a 19 años: uso diario de redes sociales, plataforma utilizada, "
