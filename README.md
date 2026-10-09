@@ -5,6 +5,7 @@ Aplicación interactiva en **Streamlit** para el Análisis Exploratorio de Datos
 El enfoque es **exploratorio y educativo**: no se construyen modelos predictivos y los resultados no constituyen un diagnóstico clínico.
 
 **Autora:** Fiorella Fernández Bruno
+
 **Curso:** Especialización en Python for Analytics - DMC Institute (2026)
 
 ## Links
